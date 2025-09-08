@@ -6,18 +6,24 @@ cpu = True
 ram = True
 disco = True
 macAddress = True
+pkts_rec = True
+pkts_env = True
 
 def create_columns(macAddress, hora, cpu, ram, disco):
     fcolumns = []
     if macAddress : fcolumns.append('mac_address')
     else : fcolumns.append('null')
-    if hora : fcolumns.append('dt_registro') 
+    if hora : fcolumns.append('horario_medicao') 
     else : fcolumns.append('null')
-    if cpu : fcolumns.append('cpu_porcentagem')
+    if cpu : fcolumns.append('uso_cpu')
     else : fcolumns.append('null')
-    if ram : fcolumns.append('ram_porcentagem')
+    if ram : fcolumns.append('uso_ram')
     else : fcolumns.append('null')
-    if disco : fcolumns.append('disco_porcentagem')
+    if disco : fcolumns.append('uso_disco')
+    else : fcolumns.append('null')
+    if pkts_rec : fcolumns.append('pkts_rec_por_seg')
+    else : fcolumns.append('null')
+    if pkts_env : fcolumns.append('pkts_env_por_seg')
     else : fcolumns.append('null')
     return fcolumns
 
@@ -51,7 +57,7 @@ while True:
                               =========== MENU - Digite um número ===========
   1 - MAC Address on/off |  4 - uso de RAM on/off            |  7 - atualizar timestamp últimos 3 registros
   2 - timestamp on/off   |  5 - uso de Disco on/off          |  8 - fechar programa
-  3 - uso de CPU on/off  |  6 - deletar últimos 5 registros  |  
+  3 - uso de CPU on/off  |  6 - deletar últimos 5 registros  |  9 - 
 """)
     comando = input("digite seu comando~ ")
     os.system('cls')
@@ -76,6 +82,3 @@ while True:
             break
         case _:
             continue
-
-
-
