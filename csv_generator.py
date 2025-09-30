@@ -13,22 +13,33 @@ def exportar_dados_componente(num, macAddres):
         cursor = db.cursor()
         componente = ""
         if num == 1:
-            componente = "CPU",
+            componente = "CPU"
         if num == 2:
-            componente = "RAM",
+            componente = "RAM"
         if num == 3:
-            componente = "Disco"
+            componente = "HD"
+        
+        print(componente)
+        print(macAddres)
 
         slctQuery = """
-    SELECT valor, medida, tipo, modelo, macAddress 
-    FROM logMonitoramento as l
-    JOIN maquina ON fkMaquina = idMaquina 
-    JOIN componente ON fkComponente = idComponente 
-    JOIN metrica ON l.fkMetrica = idMetrica 
-    WHERE macAddress = %s AND tipo = %s
+    SELECT
+        l.valor,
+        me.medida,
+        c.tipo,
+        c.modelo,
+        TRIM(m.macAddress) AS macAddress,
+        l.descricao
+    FROM logMonitoramento l
+    JOIN maquina m ON l.fkMaquina = m.idMaquina
+    JOIN componente c ON l.fkComponente = c.idComponente
+    JOIN metrica me ON l.fkMetrica = me.idMetrica
+    WHERE TRIM(m.macAddress) = %s
+    AND c.tipo = %s
+
 """
         cursor.execute(slctQuery, (macAddres, componente))
-        headers = ["Valor", "Medida", "Tipo", "Modelo", "Mac Address"]
+        headers = ["Valor", "Medida", "Tipo", "Modelo", "Mac Address", "Descrição"]
         resultados = cursor.fetchall()
         print("\n--- Monitoramento (últimos registros) ---")
         print(tabulate(resultados, headers, tablefmt="fancy_grid"))
@@ -53,21 +64,21 @@ while True:
     print("3 - Gerar CSV de disco")
     print("0 - Sair")
     
-    opcao = input("Escolha uma opção: ")
+    opcao = int(input("Escolha uma opção: "))
 
-    if opcao == "1":
+    if opcao == 1:
         c.exibir_maquinas(db)
         maquina = escolha_maquina(db)
         exportar_dados_componente(opcao, maquina)
-    elif opcao == "2":
+    elif opcao == 2:
         c.exibir_maquinas(db)
         maquina = escolha_maquina(db)
         exportar_dados_componente(opcao, maquina)
-    elif opcao == "3":
+    elif opcao == 3:
         c.exibir_maquinas(db)
         maquina = escolha_maquina(db)
         exportar_dados_componente(opcao, maquina)
-    elif opcao == "0":
+    elif opcao == 0:
         print("Operação Finalizada!")
         break
     else:
