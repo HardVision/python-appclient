@@ -5,6 +5,7 @@ import pandas as pd
 from mysql_connect import conectar_server
 import consulta as c
 from tabulate import tabulate
+import os
 
 db = conectar_server()
 
@@ -44,6 +45,13 @@ def exportar_dados_componente(num, macAddres):
         print("\n--- Monitoramento (últimos registros) ---")
         print(tabulate(resultados, headers, tablefmt="fancy_grid"))
         cursor.close()
+
+        df = pd.DataFrame(resultados, columns=headers)
+        print(df)
+
+        caminho_arquivo = os.path.join(os.getcwd(), "teste.csv")
+        df.to_csv(caminho_arquivo, index=False)
+        print(f"\nArquivo CSV salvo em: {caminho_arquivo}")
         
     except Error as e:
         print('Error ao selecionar no MySQL -', e , " - identifica-fk")
