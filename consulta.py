@@ -61,4 +61,3 @@ def menu():
             print("Opção inválida!")
 
     db.close()
-menu()
