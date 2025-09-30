@@ -3,29 +3,9 @@ from mysql.connector import connect, Error
 import dotenv as d
 from os import getenv
 from time import sleep
+from mysql_connect import conectar_server
 
 d.load_dotenv()
-
-
-def conectar_server():
-    config = {
-        'user': getenv("USER_DB"),
-        'password': getenv("PASSWORD_DB"),
-        'host': getenv("HOST_DB"),
-        'database': getenv("DATABASE_DB"),
-    }
-
-    try:
-        db = connect(**config)
-        if db.is_connected():
-            db_info = db.get_server_info()
-            print('Connected to MySQL server version -', db_info)
-        return db
-    
-    except Error as e:
-        print('Error to connect with MySQL -', e)
-        return None
-
 
 def identifica_fk(db, modelo, macAdress):
     try:
@@ -36,11 +16,11 @@ def identifica_fk(db, modelo, macAdress):
             cursor.execute(slctQueryMaq, macAdress)
             idMaquina = cursor.fetchone()  
 
-            slctQueryComp = "SELECT idComponente FROM Componente WHERE modelo = %s"
+            slctQueryComp = "SELECT idComponente FROM componente WHERE modelo = %s"
             cursor.execute(slctQueryComp, modelo)
             idComponente = cursor.fetchall()  
 
-            slctQueryComp = "SELECT fkMetrica FROM Componente WHERE modelo = %s"
+            slctQueryComp = "SELECT fkMetrica FROM componente WHERE modelo = %s"
             cursor.execute(slctQueryComp, modelo)
             idMetrica = cursor.fetchone()  
 
@@ -60,7 +40,7 @@ def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
             if idMaquina and idComponente:
                 for i in range(0, len(idComponente)):
                     query = """
-                        INSERT INTO LogMonitoramento (fkComponente, fkMaquina, fkMetrica, valor, descricao)
+                        INSERT INTO logMonitoramento (fkComponente, fkMaquina, fkMetrica, valor, descricao)
                         VALUES (%s, %s, %s, %s, %s)
                     """
                     values = (idComponente[i][0], idMaquina[0], idMetrica[0], porc[i], "Valor adicionado")

@@ -2,34 +2,13 @@ from mysql.connector import connect, Error
 from os import getenv
 import dotenv as d
 from tabulate import tabulate
+from mysql_connect import conectar_server
 
 d.load_dotenv()
 
-
-def conectar_server():
-    config = {
-    'user': getenv("USER_SELECT_DB"),
-    'password': getenv("PASSWORD_DB"),
-    'host': getenv("HOST_DB"),
-    'database': getenv("DATABASE_DB"),
-    'port': getenv("PORT_DB")
-    }
-   
-    
-    try:
-        db = connect(**config)
-        if db.is_connected():
-            db_info = db.get_server_info() 
-        print('Connected to MySQL server version -', db_info)
-        return db
-    
-    except Error as e:
-        print('Error to connect with MySQL -', e)
-        return None
-
 def exibir_maquinas(db):
     cursor = db.cursor() 
-    cursor.execute("SELECT idMaquina, macAdress FROM Maquina")
+    cursor.execute("SELECT idMaquina, macAddress FROM maquina")
     headers = ["Maquina", "Mac Adress"]
     resultados = cursor.fetchall()
     print("\n--- Máquinas ---")
@@ -38,7 +17,7 @@ def exibir_maquinas(db):
 
 def exibir_componentes(db):
     cursor = db.cursor()
-    cursor.execute("SELECT idComponente, tipo, modelo FROM Componente")
+    cursor.execute("SELECT idComponente, tipo, modelo FROM componente")
     headers = ["Componente", "Tipo", "Modelo"]
     resultados = cursor.fetchall()
     print("\n--- Componentes ---")
@@ -47,12 +26,13 @@ def exibir_componentes(db):
 
 def exibir_monitoramento(db):
     cursor = db.cursor()
-    cursor.execute("SELECT fkMaquina, fkComponente, macAdress, tipo, modelo, valor, dtHora FROM LogMonitoramento join Componente on fkComponente = idComponente join Maquina on fkMaquina = idMaquina order by idMonitoramento desc LIMIT 10")
+    cursor.execute("SELECT fkMaquina, fkComponente, macAddress, tipo, modelo, valor, dtHora FROM logMonitoramento join componente on fkComponente = idComponente join maquina on fkMaquina = idMaquina order by idMonitoramento desc LIMIT 10")
     headers = ["Máquina", "Componente", "Mac Adress", "Tipo", "Modelo", "Valor %","Data de captura"]
     resultados = cursor.fetchall()
     print("\n--- Monitoramento (últimos registros) ---")
     print(tabulate(resultados, headers, tablefmt="fancy_grid"))
     cursor.close()
+
 def menu():
     db = conectar_server()
     
@@ -73,7 +53,7 @@ def menu():
         elif opcao == "2":
             exibir_componentes(db)
         elif opcao == "3":
-            exibir_monitoramento(db)
+            exibir_monitoramento(db)    
         elif opcao == "0":
             print("Operação Finalizada!")
             break

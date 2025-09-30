@@ -2,3 +2,5 @@ psutil
 mysql-connector-python
 python-dotenv
 tabulate
+numpy
+pandas
