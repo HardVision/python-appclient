@@ -1,7 +1,6 @@
 import psutil as p
-from mysql.connector import connect, Error
+from mysql.connector import Error
 import dotenv as d
-from os import getenv
 from time import sleep
 from mysql_connect import conectar_server
 

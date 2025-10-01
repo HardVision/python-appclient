@@ -1,6 +1,30 @@
-Valor,Medida,Tipo,Modelo,Mac Address,Descrição
-20.0,CPU %,CPU,Intel Xeon,00:1A:2B:3C:4D:5E,Valor adicionado
-39.1,CPU %,CPU,Intel Xeon,00:1A:2B:3C:4D:5E,Valor adicionado
-13.8,CPU %,CPU,Intel Xeon,00:1A:2B:3C:4D:5E,Valor adicionado
-22.4,CPU %,CPU,Intel Xeon,00:1A:2B:3C:4D:5E,Valor adicionado
-22.7,CPU %,CPU,Intel Xeon,00:1A:2B:3C:4D:5E,Valor adicionado
+CPU (%),RAM (%),Disco (%),Minuto de captura
+6,53,6,25
+1,53,6,25
+3,53,6,25
+34,53,6,25
+5,53,6,25
+2,53,6,26
+3,53,6,26
+5,53,6,26
+1,53,6,26
+4,52,6,26
+4,52,6,26
+1,52,6,26
+1,52,6,26
+3,52,6,26
+3,52,6,26
+7,52,6,26
+1,52,6,26
+0,52,6,26
+1,52,6,27
+2,52,6,27
+2,52,6,27
+2,52,6,27
+2,52,6,27
+19,52,6,27
+4,52,6,27
+6,52,6,27
+3,52,6,27
+1,52,6,27
+1,52,6,27

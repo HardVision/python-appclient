@@ -1,5 +1,4 @@
-from mysql.connector import connect, Error
-from os import getenv
+from mysql.connector import Error
 import dotenv as d
 from tabulate import tabulate
 from mysql_connect import conectar_server
