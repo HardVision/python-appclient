@@ -8,27 +8,34 @@ d.load_dotenv()
 
 def identifica_fk(db, modelo, macAdress):
     try:
-        macAdress = macAdress,
-        modelo = modelo,
-        with db.cursor() as cursor:
-            slctQueryMaq = "SELECT idMaquina FROM maquina WHERE macAddress = %s"
-            cursor.execute(slctQueryMaq, macAdress)
-            idMaquina = cursor.fetchone()  
+        with db.cursor() as cursor1:
+            cursor1.execute("SELECT idMaquina FROM maquina WHERE macAddress = %s", (macAdress,))
+            idMaquina = cursor1.fetchone()
 
-            slctQueryComp = "SELECT idComponente FROM componente WHERE modelo = %s"
-            cursor.execute(slctQueryComp, modelo)
-            idComponente = cursor.fetchall()  
+        with db.cursor() as cursor2:
+            cursor2.execute("SELECT idComponente FROM componente WHERE modelo = %s", (modelo,))
+            idComponente = cursor2.fetchall()
 
-            slctQueryComp = "SELECT fkMetrica FROM componente WHERE modelo = %s"
-            cursor.execute(slctQueryComp, modelo)
-            idMetrica = cursor.fetchone()  
+        with db.cursor() as cursor3:
+            cursor3.execute("SELECT fkMetrica FROM componente WHERE modelo = %s", (modelo,))
+            idMetrica = cursor3.fetchone()
 
-            return {"idMaquina":idMaquina, 
-                    "idComponente": idComponente,
-                    "idMetrica": idMetrica}
-        
+        print(f"Maquina: {idMaquina} Componente: {idComponente} Metrica: {idMetrica}")
+
+        return {
+            "idMaquina": idMaquina,
+            "idComponente": idComponente,
+            "idMetrica": idMetrica
+        }
+
     except Error as e:
-        print('Error ao selecionar no MySQL -', e , " - identifica-fk")
+        print('Error ao selecionar no MySQL -', e, "- identifica-fk")
+        # Retorna valores padrão para evitar o erro 'NoneType'
+        return {
+            "idMaquina": None,
+            "idComponente": None,
+            "idMetrica": None
+        }
 
 
 def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
@@ -56,9 +63,9 @@ def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
 
 
 db = conectar_server()
-fkCpu = identifica_fk(db, "Intel Xeon", "00:1A:2B:3C:4D:5E")
-fkRam = identifica_fk(db, "DDR4", "00:1A:2B:3C:4D:5E")
-fkDisc = identifica_fk(db, "Seagate", "00:1A:2B:3C:4D:5E")
+fkCpu = identifica_fk(db, "Intel Xeon", "00:14:22:01:23:45")
+fkRam = identifica_fk(db, "DDR4", "00:14:22:01:23:45")
+fkDisc = identifica_fk(db, "Seagate", "00:14:22:01:23:45")
 print(fkRam)
 
 while True:

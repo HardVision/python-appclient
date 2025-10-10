@@ -67,7 +67,6 @@ def exportar_dados_componente(macAddres):
         resultados_disco = cursor.fetchall()
         cursor.execute(slctQueryMin, macAddres)
         resultados_min= cursor.fetchall()
-        headers = ["Captura RAM (%)", "Captura CPU (%)", "Captura Disco (%)", "Minuto da captura"]
         
         print(resultados_cpu, resultados_ram, resultados_disco, resultados_min)
 
