@@ -18,7 +18,7 @@ def exportar_dados_componente(macAddres):
     FROM logMonitoramento l
     JOIN maquina m ON l.fkMaquina = m.idMaquina
     JOIN componente c ON l.fkComponente = c.idComponente
-    JOIN metrica me ON l.fkMetrica = me.idMetrica
+    JOIN metricaComponente me ON l.fkMetrica = me.idMetrica
     WHERE TRIM(m.macAddress) = %s
     AND c.tipo = 'CPU'
 
@@ -30,7 +30,7 @@ def exportar_dados_componente(macAddres):
     FROM logMonitoramento l
     JOIN maquina m ON l.fkMaquina = m.idMaquina
     JOIN componente c ON l.fkComponente = c.idComponente
-    JOIN metrica me ON l.fkMetrica = me.idMetrica
+    JOIN metricaComponente me ON l.fkMetrica = me.idMetrica
     WHERE TRIM(m.macAddress) = %s
     AND c.tipo = 'RAM'
 
@@ -42,7 +42,7 @@ def exportar_dados_componente(macAddres):
     FROM logMonitoramento l
     JOIN maquina m ON l.fkMaquina = m.idMaquina
     JOIN componente c ON l.fkComponente = c.idComponente
-    JOIN metrica me ON l.fkMetrica = me.idMetrica
+    JOIN metricaComponente me ON l.fkMetrica = me.idMetrica
     WHERE TRIM(m.macAddress) = %s
     AND c.tipo = 'Disco'
 
@@ -54,7 +54,7 @@ def exportar_dados_componente(macAddres):
     FROM logMonitoramento l
     JOIN maquina m ON l.fkMaquina = m.idMaquina
     JOIN componente c ON l.fkComponente = c.idComponente
-    JOIN metrica me ON l.fkMetrica = me.idMetrica
+    JOIN metricaComponente me ON l.fkMetrica = me.idMetrica
     WHERE TRIM(m.macAddress) = %s
     AND c.tipo = 'Disco'
 

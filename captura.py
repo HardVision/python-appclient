@@ -46,10 +46,10 @@ def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
             if idMaquina and idComponente:
                 for i in range(0, len(idComponente)):
                     query = """
-                        INSERT INTO logMonitoramento (fkComponente, fkMaquina, fkMetrica, valor, descricao)
-                        VALUES (%s, %s, %s, %s, %s)
+                        INSERT INTO logMonitoramento (fkComponente, fkMaquina, fkAlerta, fkMetrica, valor, descricao)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                     """
-                    values = (idComponente[i][0], idMaquina[0], idMetrica[0], porc[i], "Valor adicionado")
+                    values = (idComponente[i][0], idMaquina[0], 1, idMetrica[0], porc[i], "Valor adicionado")
                     cursor.execute(query, values)
                     db.commit()
                     print(cursor.rowcount, "registro inserido na tabela Monitoramento")
@@ -63,9 +63,9 @@ def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
 
 
 db = conectar_server()
-fkCpu = identifica_fk(db, "Intel Xeon", "00:14:22:01:23:45")
-fkRam = identifica_fk(db, "DDR4", "00:14:22:01:23:45")
-fkDisc = identifica_fk(db, "Seagate", "00:14:22:01:23:45")
+fkCpu = identifica_fk(db, "Ryzen 5 5600X", "00:1A:2B:3C:4D:5E")
+fkRam = identifica_fk(db, "Vengeance LPX", "00:1A:2B:3C:4D:5E")
+fkDisc = identifica_fk(db, "970 EVO Plus", "00:1A:2B:3C:4D:5E")
 print(fkRam)
 
 while True:
