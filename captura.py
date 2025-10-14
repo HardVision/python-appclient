@@ -37,10 +37,24 @@ def identifica_fk(db, modelo, macAdress):
             "idMetrica": None
         }
 
+def insert_alerta(porc, idMetrica):
+    print(f"Valor a ser verificado: {porc}\nID da métrica: {idMetrica}")
+    try: 
+        with db.cursor() as cursor:
+            slctInterval = "select min, max from metricaComponente where idMetrica = %s"
+            cursor.execute(slctInterval, (idMetrica[0], ))
+            returnQuery = cursor.fetchone()
+            print(f"Min: {returnQuery[0]}\nMax: {returnQuery[1]}")
+    except Error as e:  
+          print('Erro ao selecionar metricas MySQL -', e)
+    return
+
+
 
 def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
     print("Fks: ", idMaquina, idComponente, idMetrica)
     print("Valor a ser adicionado: ", porc)
+    insert_alerta(porc, idMetrica)
     try:
         with db.cursor() as cursor:
             if idMaquina and idComponente:
