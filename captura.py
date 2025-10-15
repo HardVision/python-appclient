@@ -3,7 +3,7 @@ from mysql.connector import Error
 import dotenv as d
 from time import sleep
 from mysql_connect import conectar_server
-
+from numpy import mean
 d.load_dotenv()
 
 def identifica_fk(db, modelo, macAdress):
@@ -37,7 +37,7 @@ def identifica_fk(db, modelo, macAdress):
             "idMetrica": None
         }
 
-def insert_alerta(porc, idMetrica):
+def acessar_metricas(porc, idMetrica):
     print(f"Valor a ser verificado: {porc}\nID da métrica: {idMetrica}")
     try: 
         with db.cursor() as cursor:
@@ -45,16 +45,57 @@ def insert_alerta(porc, idMetrica):
             cursor.execute(slctInterval, (idMetrica[0], ))
             returnQuery = cursor.fetchone()
             print(f"Min: {returnQuery[0]}\nMax: {returnQuery[1]}")
+
+            return {"porcentagem": porc, 
+            "id_metrica": idMetrica, 
+            "metricas": returnQuery}
+
     except Error as e:  
           print('Erro ao selecionar metricas MySQL -', e)
-    return
+
+def insert_alerta(porc, idMetrica, returnQuery):
+    print("Return query:", returnQuery)
+    try:
+        descricao = ""
+        estado = ""
+        exists_alerta = False
+        if mean(porc) < returnQuery[0]:
+            descricao = "Seu componente está com a demanda muito baixa. Verifique sua máquina!"
+
+            estado = "Uso baixissimo"
+            exists_alerta = True
+        elif mean(porc) > returnQuery[1]:
+            descricao = "Seu componente está utilizando muitos recursos. Verifique-o!"
+
+            estado = "Uso altissímo"
+            exists_alerta = True
+        else:
+            descricao = "O uso do seu componente é saudável"
+    
+        if exists_alerta is False:
+            return {"descricao": descricao, "id_alerta": None}
+        else:
+            with db.cursor() as cursor:
+                insert = "insert into alertaComponente (fkMetrica, estado) values(%s, %s)"
+                values = (idMetrica[0], estado)
+                cursor.execute(insert, values)
+                db.commit()
+                id_alerta = cursor.lastrowid
+                print(cursor.rowcount, "registro inserido na tabela AlertaComponente")
+                return {"descricao": descricao, "id_alerta":  id_alerta}
+
+    except Error as e:  
+        print('Erro ao inserir alertas no MySQL -', e)
+
+            
 
 
 
 def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
     print("Fks: ", idMaquina, idComponente, idMetrica)
     print("Valor a ser adicionado: ", porc)
-    insert_alerta(porc, idMetrica)
+    metricas = acessar_metricas(porc, idMetrica)
+    alerta = insert_alerta(metricas["porcentagem"], metricas["id_metrica"], metricas["metricas"])
     try:
         with db.cursor() as cursor:
             if idMaquina and idComponente:
@@ -63,7 +104,7 @@ def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
                         INSERT INTO logMonitoramento (fkComponente, fkMaquina, fkAlerta, fkMetrica, valor, descricao)
                         VALUES (%s, %s, %s, %s, %s, %s)
                     """
-                    values = (idComponente[i][0], idMaquina[0], 1, idMetrica[0], porc[i], "Valor adicionado")
+                    values = (idComponente[i][0], idMaquina[0], alerta["id_alerta"], idMetrica[0], porc[i], alerta["descricao"])
                     cursor.execute(query, values)
                     db.commit()
                     print(cursor.rowcount, "registro inserido na tabela Monitoramento")
