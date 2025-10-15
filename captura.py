@@ -4,21 +4,20 @@ import dotenv as d
 from time import sleep
 from mysql_connect import conectar_server
 from numpy import mean
-d.load_dotenv()
 
+d.load_dotenv()
 def identifica_fk(db, modelo, macAdress):
     try:
-        with db.cursor() as cursor1:
-            cursor1.execute("SELECT idMaquina FROM maquina WHERE macAddress = %s", (macAdress,))
-            idMaquina = cursor1.fetchone()
+        with db.cursor() as cursor:
+            # Busca id da máquina
+            cursor.execute("SELECT idMaquina FROM maquina WHERE macAddress = %s", (macAdress,))
+            idMaquina = cursor.fetchone()
 
-        with db.cursor() as cursor2:
-            cursor2.execute("SELECT idComponente FROM componente WHERE modelo = %s", (modelo,))
-            idComponente = cursor2.fetchall()
+            cursor.execute("SELECT idComponente FROM componente WHERE modelo LIKE %s", (f"%{modelo}%",))
+            idComponente = cursor.fetchall()
 
-        with db.cursor() as cursor3:
-            cursor3.execute("SELECT fkMetrica FROM componente WHERE modelo = %s", (modelo,))
-            idMetrica = cursor3.fetchone()
+            cursor.execute("SELECT fkMetrica FROM componente WHERE modelo LIKE %s", (f"%{modelo}%",))
+            idMetrica = cursor.fetchall()
 
         print(f"Maquina: {idMaquina} Componente: {idComponente} Metrica: {idMetrica}")
 
@@ -30,12 +29,7 @@ def identifica_fk(db, modelo, macAdress):
 
     except Error as e:
         print('Error ao selecionar no MySQL -', e, "- identifica-fk")
-        # Retorna valores padrão para evitar o erro 'NoneType'
-        return {
-            "idMaquina": None,
-            "idComponente": None,
-            "idMetrica": None
-        }
+        return {"idMaquina": None, "idComponente": None, "idMetrica": None}
 
 def acessar_metricas(porc, idMetrica):
     print(f"Valor a ser verificado: {porc}\nID da métrica: {idMetrica}")
@@ -94,17 +88,17 @@ def insert_alerta(porc, idMetrica, returnQuery):
 def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
     print("Fks: ", idMaquina, idComponente, idMetrica)
     print("Valor a ser adicionado: ", porc)
-    metricas = acessar_metricas(porc, idMetrica)
-    alerta = insert_alerta(metricas["porcentagem"], metricas["id_metrica"], metricas["metricas"])
     try:
         with db.cursor() as cursor:
             if idMaquina and idComponente:
                 for i in range(0, len(idComponente)):
+                    metricas = acessar_metricas(porc[i], idMetrica[i])
+                    alerta = insert_alerta(metricas["porcentagem"], metricas["id_metrica"], metricas["metricas"])
                     query = """
                         INSERT INTO logMonitoramento (fkComponente, fkMaquina, fkAlerta, fkMetrica, valor, descricao)
                         VALUES (%s, %s, %s, %s, %s, %s)
                     """
-                    values = (idComponente[i][0], idMaquina[0], alerta["id_alerta"], idMetrica[0], porc[i], alerta["descricao"])
+                    values = (idComponente[i][0], idMaquina[0], alerta["id_alerta"], idMetrica[i][0], porc[i], alerta["descricao"])
                     cursor.execute(query, values)
                     db.commit()
                     print(cursor.rowcount, "registro inserido na tabela Monitoramento")
