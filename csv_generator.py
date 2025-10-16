@@ -4,13 +4,65 @@ from mysql_connect import conectar_server
 import consulta as c
 import os
 
+
 db = conectar_server()
+
+
+def exportar_dados_nucleo(macAddres):
+    try:
+        with db.cursor() as cursor:
+            macAddres = (macAddres,)
+            slctQueryCpu = """
+                SELECT
+                    c.tipo AS nome_nucleo,
+                    l.valor AS uso_cpu,
+                    MINUTE(l.dtHora) AS minuto
+                FROM logMonitoramento l
+                JOIN maquina m ON l.fkMaquina = m.idMaquina
+                JOIN componente c ON l.fkComponente = c.idComponente
+                JOIN metricaComponente me ON l.fkMetrica = me.idMetrica
+                WHERE TRIM(m.macAddress) = %s
+                AND c.tipo LIKE 'CPU%%'
+                ORDER BY nome_nucleo, minuto;
+            """
+            cursor.execute(slctQueryCpu, macAddres)
+            valores = cursor.fetchall()
+            slice_nucleos(valores)
+    except Error as e:
+        print("Não foi possível realizar a consulta - ", e)
+
+
+def slice_nucleos(nucleos):
+
+    df = pd.DataFrame(nucleos, columns=["Núcleo", "Valor", "Minuto"])
+
+    resumo = df["Núcleo"].value_counts().sort_index()
+
+    tam = resumo.min()
+    print(f"\nUsando {tam+1} registros")
+
+    dados = {}
+    for nucleo in resumo.index:
+        valores = df.loc[df["Núcleo"] == nucleo, "Valor"].head(tam).to_list()
+        dados[nucleo] = valores
+
+    df_final = pd.DataFrame(dados)
+
+    print("\n=== DataFrame final ===")
+    print(df_final.head(10)) 
+
+    caminho_arquivo = os.path.join(os.getcwd(), "cpu_nucleos_por_coluna.csv")
+    df_final.to_csv(caminho_arquivo, index=False)
+    print(f"\nArquivo CSV salvo em: {caminho_arquivo}")
+
+    
 
 def exportar_dados_componente(macAddres):
     try:
         cursor = db.cursor()
         macAddres = macAddres,
         print(macAddres)
+        
 
         slctQueryCpu = """
     SELECT
@@ -20,8 +72,7 @@ def exportar_dados_componente(macAddres):
     JOIN componente c ON l.fkComponente = c.idComponente
     JOIN metricaComponente me ON l.fkMetrica = me.idMetrica
     WHERE TRIM(m.macAddress) = %s
-    AND c.tipo = 'CPU'
-
+    AND c.tipo like '%CPU%'
 """
 
         slctQueryRam = """
@@ -108,5 +159,5 @@ def escolha_maquina(db):
     
 db = conectar_server()
 maquina = escolha_maquina(db)
-exportar_dados_componente(maquina)
+exportar_dados_nucleo(maquina)
 print("Dados exportados para CSV!")
