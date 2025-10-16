@@ -64,17 +64,6 @@ def exportar_dados_componente(macAddres):
         print(macAddres)
         
 
-        slctQueryCpu = """
-    SELECT
-        l.valor
-    FROM logMonitoramento l
-    JOIN maquina m ON l.fkMaquina = m.idMaquina
-    JOIN componente c ON l.fkComponente = c.idComponente
-    JOIN metricaComponente me ON l.fkMetrica = me.idMetrica
-    WHERE TRIM(m.macAddress) = %s
-    AND c.tipo like '%CPU%'
-"""
-
         slctQueryRam = """
     SELECT
         l.valor
@@ -98,48 +87,27 @@ def exportar_dados_componente(macAddres):
     AND c.tipo = 'Disco'
 
 """
-
-        slctQueryMin = """
-    SELECT
-        minute(l.dtHora)
-    FROM logMonitoramento l
-    JOIN maquina m ON l.fkMaquina = m.idMaquina
-    JOIN componente c ON l.fkComponente = c.idComponente
-    JOIN metricaComponente me ON l.fkMetrica = me.idMetrica
-    WHERE TRIM(m.macAddress) = %s
-    AND c.tipo = 'Disco'
-
-    """
-        cursor.execute(slctQueryCpu, macAddres)
-        resultados_cpu = cursor.fetchall()
         cursor.execute(slctQueryRam, macAddres)
         resultados_ram = cursor.fetchall()
         cursor.execute(slctQueryDisco, macAddres)
         resultados_disco = cursor.fetchall()
-        cursor.execute(slctQueryMin, macAddres)
-        resultados_min= cursor.fetchall()
         
-        print(resultados_cpu, resultados_ram, resultados_disco, resultados_min)
+        print(resultados_ram, resultados_disco)
 
-        cpu_tratada = []
         ram_tratada = []
         disco_tratado = []
-        min_tratado = []
 
-        for i in range(0,len(resultados_cpu)):
-            print(cpu_tratada.append(resultados_cpu[i][0]))
+        for i in range(0,len(resultados_disco)):
             ram_tratada.append(resultados_ram[i][0])
             disco_tratado.append(resultados_disco[i][0])
-            min_tratado.append(resultados_min[i][0])
 
 
         cursor.close()
         dict_capturas = {
-            "CPU (%)": cpu_tratada,
             "RAM (%)": ram_tratada,
             "Disco (%)": disco_tratado,
-            "Minuto de captura": min_tratado
         }
+        
         df = pd.DataFrame(dict_capturas)
         print(df)
 
@@ -160,4 +128,5 @@ def escolha_maquina(db):
 db = conectar_server()
 maquina = escolha_maquina(db)
 exportar_dados_nucleo(maquina)
+exportar_dados_componente(maquina)
 print("Dados exportados para CSV!")
