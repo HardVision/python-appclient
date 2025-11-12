@@ -91,7 +91,7 @@ def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
     try:
         with db.cursor() as cursor:
             if idMaquina and idComponente:
-                for i in range(0, len(idComponente)):
+                for i in range(min(len(idComponente), len(porc))):
                     metricas = acessar_metricas(porc[i], idMetrica[i])
                     alerta = insert_alerta(metricas["porcentagem"], metricas["id_metrica"], metricas["metricas"])
                     query = """
