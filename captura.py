@@ -114,7 +114,7 @@ def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
 db = conectar_server()
 fkCpu = identifica_fk(db, "Ryzen 5 5600X", "00:1A:2B:3C:4D:5E")
 fkRam = identifica_fk(db, "Vengeance LPX", "00:1A:2B:3C:4D:5E")
-fkDisc = identifica_fk(db, "970 EVO Plus", "00:1A:2B:3C:4D:5E")
+fkDisc = identifica_fk(db, "978 EVO Plus", "00:1A:2B:3C:4D:5E")
 print(fkRam)
 
 while True:
