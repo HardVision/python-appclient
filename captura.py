@@ -54,7 +54,7 @@ def insert_alerta(porc, idMetrica, returnQuery):
         estado = ""
         exists_alerta = False
         if mean(porc) > returnQuery[0] and mean(porc) < returnQuery[1]:
-            descricao = "Seu componente está com a demanda muito baixa. Verifique sua máquina!"
+            descricao = "Seu componente está ficando estressado. Verifique sua máquina!"
 
             estado = "Preocupante"
             exists_alerta = True
