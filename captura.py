@@ -128,7 +128,7 @@ while True:
         inserir_porcentagem(disk_porc, db, fkDisc["idMaquina"], fkDisc["idComponente"], fkDisc["idMetrica"])
 
 
-    # MUDANÇAS DA JULIA DE GRÁFICO EM TEMPO REAL
+    
     dicionario = {
         "idMaquina": idMaquina,
         "data": {
@@ -143,8 +143,8 @@ while True:
 
     response = requests.get("http://localhost:3333/tempoReal/monitoramento/0", json=dicionario)
     if response.status_code == 200:
-        print("📡 Dados enviados com sucesso para a API.")
+        print("Dados enviados com sucesso para a API.")
     else:
-        print(f"⚠️ Falha ao enviar dados para a API. Status code: {response.status_code}")
+        print(f"Falha ao enviar dados para a API. Status code: {response.status_code}")
     
     sleep(2)
