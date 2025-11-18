@@ -109,7 +109,7 @@ def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
         print('Error ao inserir no MySQL -', e)
 
 
-
+# fks
 
 db = conectar_server()
 fkCpu = identifica_fk(db, "Ryzen 5 5600X", "00:1A:2B:3C:4D:5E")
