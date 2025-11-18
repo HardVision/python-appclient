@@ -2,6 +2,7 @@ import psutil as p
 from mysql.connector import Error
 import dotenv as d
 from time import sleep
+import requests
 from mysql_connect import conectar_server
 from numpy import mean
 
@@ -73,16 +74,13 @@ def insert_alerta(porc, idMetrica, returnQuery):
                 insert = "insert into alertaComponente (fkMetrica, estado) values(%s, %s)"
                 values = (idMetrica[0], estado)
                 cursor.execute(insert, values)
-                db.commit()
+                # db.commit()
                 id_alerta = cursor.lastrowid
                 print(cursor.rowcount, "registro inserido na tabela AlertaComponente")
                 return {"descricao": descricao, "id_alerta":  id_alerta}
 
     except Error as e:  
         print('Erro ao inserir alertas no MySQL -', e)
-
-            
-
 
 
 def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
@@ -118,14 +116,35 @@ fkDisc = identifica_fk(db, "978 EVO Plus", "00:1A:2B:3C:4D:5E")
 print(fkRam)
 
 while True:
-    ram_porc = p.virtual_memory().percent,
-    disc_porc = p.disk_usage("/").percent,
+    idMaquina = fkCpu["idMaquina"]
+    ram_porc = p.virtual_memory().percent
+    disk_porc = p.disk_usage("/").percent
+    disk_usage = p.disk_usage("C://").used
     cpu_porc = p.cpu_percent(interval=1, percpu=True)
     if db:
         # Chamada para salvar no banco
         inserir_porcentagem(cpu_porc, db, fkCpu["idMaquina"], fkCpu["idComponente"], fkCpu["idMetrica"])
         inserir_porcentagem(ram_porc, db, fkRam["idMaquina"], fkRam["idComponente"], fkRam["idMetrica"])
-        inserir_porcentagem(disc_porc, db, fkDisc["idMaquina"], fkDisc["idComponente"], fkDisc["idMetrica"])
+        inserir_porcentagem(disk_porc, db, fkDisc["idMaquina"], fkDisc["idComponente"], fkDisc["idMetrica"])
 
-      
+
+    # MUDANÇAS DA JULIA DE GRÁFICO EM TEMPO REAL
+    dicionario = {
+        "idMaquina": idMaquina,
+        "data": {
+            "ram_porc": ram_porc,
+            "disk": {
+                "disk_porc": disk_porc,
+                "disk_usage": disk_usage
+            },
+            "cpu_porc": cpu_porc
+        }
+    }
+
+    response = requests.get("http://localhost:3333/tempoReal/monitoramento/0", json=dicionario)
+    if response.status_code == 200:
+        print("📡 Dados enviados com sucesso para a API.")
+    else:
+        print(f"⚠️ Falha ao enviar dados para a API. Status code: {response.status_code}")
+    
     sleep(2)
