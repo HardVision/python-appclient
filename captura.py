@@ -229,6 +229,20 @@ def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
 
 
 
+def atualizar_uptime(db, macaddress, uptime):
+    try:
+        with db.cursor() as cursor:
+            query = "UPDATE maquina SET uptime = %s WHERE macAddress = %s"
+            values = (uptime, macaddress)
+            cursor.execute(query, values)
+            db.commit()
+            print("Uptime atualizado na tabela maquina:", uptime)
+    except Error as e:
+        print("Erro ao atualizar uptime:", e)
+
+
+
+
 # fks
 
 db = conectar_server()
@@ -244,11 +258,18 @@ while True:
     disk_porc = p.disk_usage("/").percent
     disk_usage = p.disk_usage("C://").used
     cpu_porc = p.cpu_percent(interval=1, percpu=True)
+
+    boot_time = p.boot_time()
+    uptime_segundos = int(time.time() - boot_time)
+
+
     if db:
         # Chamada para salvar no banco
         inserir_porcentagem(cpu_porc, db, fkCpu["idMaquina"], fkCpu["idComponente"], fkCpu["idMetrica"])
         inserir_porcentagem(ram_porc, db, fkRam["idMaquina"], fkRam["idComponente"], fkRam["idMetrica"])
         inserir_porcentagem(disk_porc, db, fkDisc["idMaquina"], fkDisc["idComponente"], fkDisc["idMetrica"])
         inserir_pids(db, macaddress=macAddres)
+
+        atualizar_uptime(db, macAddress, uptime_segundos)
     
     sleep(2)
