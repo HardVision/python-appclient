@@ -17,7 +17,7 @@ def identificar_macaddres(db):
             exists = cursor.fetchone()
             if exists is None:
                  cursor.execute("INSERT INTO maquina (fkEmpresa, fkSistema, macAddress, localizacao) VALUES (1, 1, %s, 'Desconhecida')", (macAddres, ))
-                 cursor.commit()
+                 db.commit()
 
         print(f"Mac Address: {macAddres}")
 
