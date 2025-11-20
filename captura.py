@@ -27,6 +27,28 @@ def identificar_macaddres(db):
         print('Error ao selecionar no MySQL -', e, "- identificar_macaddress")
         return f"Mac Address: {None}"
 
+
+def inserir_pids(db, macaddress):
+    try:
+        with db.cursor() as cursor:
+            for process in p.process_iter(["pid", "name", "username"]):
+                cpu = process.cpu_percent(interval=1)
+                memory = process.memory_percent();
+                io = process.io_counters();
+                cursor.execute("SELECT * FROM processo join maquina on fkMaquina = idMaquina WHERE macAddress = %s and (pid = %s or nome = %s)", (macAddres,))
+                exists = cursor.fetchone()
+
+                if(exists != None){
+                      cursor.execute("SELECT * FROM processo join maquina on fkMaquina = idMaquina WHERE macAddress = %s and (pid = %s or nome = %s)", (macAddres,))
+                }
+                print(f"PID: {process.info['pid']} - Nome: {process.info['name']} - Usuário: {process.info['username']} - CPU: {cpu} - Memória: {memory} - IO: {io}")
+
+
+    except Error as e:
+        print('Error ao selecionar no MySQL -', e, "- identifica-fk")
+        return {"idMaquina": None, "idComponente": None, "idMetrica": None}
+    
+
 def identifica_fk(db, modelo, macAdress):
     try:
         with db.cursor() as cursor:
@@ -173,5 +195,6 @@ while True:
         inserir_porcentagem(cpu_porc, db, fkCpu["idMaquina"], fkCpu["idComponente"], fkCpu["idMetrica"])
         inserir_porcentagem(ram_porc, db, fkRam["idMaquina"], fkRam["idComponente"], fkRam["idMetrica"])
         inserir_porcentagem(disk_porc, db, fkDisc["idMaquina"], fkDisc["idComponente"], fkDisc["idMetrica"])
+        inserir_pids(db, macaddress=macAddres)
     
     sleep(2)
