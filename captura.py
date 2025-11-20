@@ -32,22 +32,76 @@ def inserir_pids(db, macaddress):
     try:
         with db.cursor() as cursor:
             for process in p.process_iter(["pid", "name", "username"]):
+                
                 cpu = process.cpu_percent(interval=1)
-                memory = process.memory_percent();
-                io = process.io_counters();
-                cursor.execute("SELECT * FROM processo join maquina on fkMaquina = idMaquina WHERE macAddress = %s and (pid = %s or nome = %s)", (macAddres,))
+                memory = process.memory_percent()
+
+                io = process.io_counters()
+                io_read = io[0]    # <-- garante que é número
+                io_write = io[1]   # <-- garante que é número
+
+                cursor.execute("""
+                    SELECT idMaquina 
+                    FROM processo 
+                    JOIN maquina ON fkMaquina = idMaquina 
+                    WHERE macAddress = %s 
+                      AND (pid = %s OR nome = %s)
+                """, (macaddress, process.info["pid"], process.info["name"]))
+
                 exists = cursor.fetchone()
 
-                if(exists != None){
-                      cursor.execute("SELECT * FROM processo join maquina on fkMaquina = idMaquina WHERE macAddress = %s and (pid = %s or nome = %s)", (macAddres,))
-                }
-                print(f"PID: {process.info['pid']} - Nome: {process.info['name']} - Usuário: {process.info['username']} - CPU: {cpu} - Memória: {memory} - IO: {io}")
+                # === UPDATE ===
+                if exists is not None:
+                    cursor.execute("""
+                    SELECT idMaquina
+                    FROM maquina where macAddress = %s
+                """, (macaddress,))
+                    
+                    idMaquina = cursor.fetchone()
 
+                    cursor.execute(
+                        """
+                        UPDATE processo 
+                        SET usoCpu = %s,
+                            usoRam = %s,
+                            discoLido = %s,
+                            discoRecebido = %s
+                        WHERE nome = %s AND fkMaquina = %s
+                        """,
+                        (cpu, memory, io_read, io_write,
+                         process.info["name"], idMaquina[0])
+                    )
+
+                # === INSERT ===
+                else:
+                    cursor.execute("""
+                    SELECT idMaquina 
+                    FROM maquina where macAddress = %s
+                """, (macaddress,))
+                    
+                    idMaquina = cursor.fetchone()
+                
+                    cursor.execute(
+                        """
+                        INSERT INTO processo 
+                        (fkMaquina, pid, nome, usuario, usoCpu, usoRam, discoLido, discoRecebido)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (idMaquina[0],  # você precisa garantir que idMaquina vem de algum lugar
+                         process.info["pid"],
+                         process.info["name"],
+                         process.info["username"],
+                         cpu, memory,
+                         io_read, io_write)
+                    )
+
+                db.commit()
+
+                print(f"PID: {process.info['pid']} - Nome: {process.info['name']} - Usuário: {process.info['username']} - CPU: {cpu} - Memória: {memory} - IO_read: {io_read} - IO_write: {io_write}")
 
     except Error as e:
-        print('Error ao selecionar no MySQL -', e, "- identifica-fk")
-        return {"idMaquina": None, "idComponente": None, "idMetrica": None}
-    
+        print('Erro ao selecionar no MySQL -', e, "- inserir_pids")
+
 
 def identifica_fk(db, modelo, macAdress):
     try:
