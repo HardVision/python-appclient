@@ -2,7 +2,6 @@ import psutil as p
 from mysql.connector import Error
 import dotenv as d
 from time import sleep
-import requests
 from mysql_connect import conectar_server
 from numpy import mean
 from getmac import get_mac_address as gma
@@ -105,27 +104,53 @@ def insert_alerta(porc, idMetrica, returnQuery):
 
 
 def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
-    print("Fks: ", idMaquina, idComponente, idMetrica)
-    print("Valor a ser adicionado: ", porc)
+    if not isinstance(porc, list):
+        porc = [porc]
+
+    if isinstance(idMaquina, tuple):
+        idMaquina = idMaquina[0]
+    
+    idComponente = [c[0] for c in idComponente]
+    idMetrica = [m[0] for m in idMetrica]
+
+    print("Fks normalizadas:", idMaquina, idComponente, idMetrica)
+    print("Valores a serem adicionados:", porc)
+
     try:
         with db.cursor() as cursor:
-            if idMaquina and idComponente:
-                for i in range(min(len(idComponente), len(porc))):
-                    metricas = acessar_metricas(porc[i], idMetrica[i])
-                    alerta = insert_alerta(metricas["porcentagem"], metricas["id_metrica"], metricas["metricas"])
-                    query = """
-                        INSERT INTO logMonitoramento (fkComponente, fkMaquina, fkAlerta, fkMetrica, valor, descricao)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                    """
-                    values = (idComponente[i][0], idMaquina[0], alerta["id_alerta"], idMetrica[i][0], porc[i], alerta["descricao"])
-                    cursor.execute(query, values)
-                    db.commit()
-                    print(cursor.rowcount, "registro inserido na tabela Monitoramento")
-            else:
-                print("Máquina ou componente não encontrados no banco de dados.")
+            qtd = min(len(idComponente), len(porc))
+
+            for i in range(qtd):
+                metricas = acessar_metricas(porc[i], [idMetrica[i]])
+                alerta = insert_alerta(
+                    metricas["porcentagem"],
+                    metricas["id_metrica"],
+                    metricas["metricas"]
+                )
+
+                query = """
+                    INSERT INTO logMonitoramento 
+                    (fkComponente, fkMaquina, fkAlerta, fkMetrica, valor, descricao)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """
+
+                values = (
+                    idComponente[i],
+                    idMaquina,
+                    alerta["id_alerta"],
+                    idMetrica[i],
+                    porc[i],
+                    alerta["descricao"]
+                )
+
+                cursor.execute(query, values)
+                db.commit()
+
+                print(cursor.rowcount, "registro inserido em logMonitoramento")
 
     except Error as e:
-        print('Error ao inserir no MySQL -', e)
+        print('Erro ao inserir no MySQL -', e)
+
 
 
 # fks
@@ -148,25 +173,5 @@ while True:
         inserir_porcentagem(cpu_porc, db, fkCpu["idMaquina"], fkCpu["idComponente"], fkCpu["idMetrica"])
         inserir_porcentagem(ram_porc, db, fkRam["idMaquina"], fkRam["idComponente"], fkRam["idMetrica"])
         inserir_porcentagem(disk_porc, db, fkDisc["idMaquina"], fkDisc["idComponente"], fkDisc["idMetrica"])
-
-
-    
-    dicionario = {
-        "idMaquina": idMaquina,
-        "data": {
-            "ram_porc": ram_porc,
-            "disk": {
-                "disk_porc": disk_porc,
-                "disk_usage": disk_usage
-            },
-            "cpu_porc": cpu_porc
-        }
-    }
-
-    response = requests.get("http://localhost:3333/tempoReal/monitoramento/0", json=dicionario)
-    if response.status_code == 200:
-        print("Dados enviados com sucesso para a API.")
-    else:
-        print(f"Falha ao enviar dados para a API. Status code: {response.status_code}")
     
     sleep(2)

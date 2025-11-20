@@ -5,3 +5,4 @@ tabulate
 numpy
 pandas
 getmac
+requests
