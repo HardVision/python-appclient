@@ -4,3 +4,4 @@ python-dotenv
 tabulate
 numpy
 pandas
+getmac

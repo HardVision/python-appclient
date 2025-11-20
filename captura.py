@@ -4,8 +4,29 @@ import dotenv as d
 from time import sleep
 from mysql_connect import conectar_server
 from numpy import mean
+from getmac import get_mac_address as gma
 
 d.load_dotenv()
+
+def identificar_macaddres(db):
+    try:
+        macAddres = gma()
+        with db.cursor() as cursor:
+            # Busca id da máquina
+            cursor.execute("SELECT * FROM maquina WHERE macAddress = %s", (macAddres,))
+            exists = cursor.fetchone()
+            if exists is None:
+                 cursor.execute("INSERT INTO maquina (fkEmpresa, fkSistema, macAddress, localizacao) VALUES (1, 1, %s, 'Desconhecida')", (macAddres, ))
+                 cursor.commit()
+
+        print(f"Mac Address: {macAddres}")
+
+        return macAddres
+
+    except Error as e:
+        print('Error ao selecionar no MySQL -', e, "- identificar_macaddress")
+        return f"Mac Address: {None}"
+
 def identifica_fk(db, modelo, macAdress):
     try:
         with db.cursor() as cursor:
@@ -112,9 +133,10 @@ def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
 
 
 db = conectar_server()
-fkCpu = identifica_fk(db, "Ryzen 5 5600X", "00:1A:2B:3C:4D:5E")
-fkRam = identifica_fk(db, "Vengeance LPX", "00:1A:2B:3C:4D:5E")
-fkDisc = identifica_fk(db, "978 EVO Plus", "00:1A:2B:3C:4D:5E")
+macAddres =identificar_macaddres(db)
+fkCpu = identifica_fk(db, "Ryzen 5 5600X", macAddres)
+fkRam = identifica_fk(db, "Vengeance LPX", macAddres)
+fkDisc = identifica_fk(db, "978 EVO Plus", macAddres)
 print(fkRam)
 
 while True:
