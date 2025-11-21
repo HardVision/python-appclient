@@ -8,268 +8,250 @@ from getmac import get_mac_address as gma
 
 d.load_dotenv()
 
+
+# ============================================================
+# IDENTIFICA / REGISTRA MÁQUINA
+# ============================================================
 def identificar_macaddres(db):
     try:
-        macAddres = gma()
+        macAddress = gma()
+
         with db.cursor() as cursor:
-            # Busca id da máquina
-            cursor.execute("SELECT * FROM maquina WHERE macAddress = %s", (macAddres,))
+            cursor.execute("""
+                SELECT idMaquina 
+                FROM maquina 
+                WHERE macAddress = %s
+            """, (macAddress,))
             exists = cursor.fetchone()
+
+            # registro novo
             if exists is None:
-                 cursor.execute("INSERT INTO maquina (fkEmpresa, fkSistema, macAddress, localizacao) VALUES (1, 1, %s, 'Desconhecida')", (macAddres, ))
-                 db.commit()
+                cursor.execute("""
+                    INSERT INTO maquina (fkEmpresa, fkSistema, macAddress, localizacao)
+                    VALUES (1, 1, %s, 'Desconhecida')
+                """, (macAddress,))
+                db.commit()
 
-        print(f"Mac Address: {macAddres}")
+                cursor.execute("""
+                    SELECT idMaquina FROM maquina WHERE macAddress = %s
+                """, (macAddress,))
+                exists = cursor.fetchone()
 
-        return macAddres
+        print(f"Mac Address identificado: {macAddress}")
+        return macAddress, exists[0]
 
     except Error as e:
-        print('Error ao selecionar no MySQL -', e, "- identificar_macaddress")
-        return f"Mac Address: {None}"
+        print("Erro ao identificar máquina:", e)
+        return None, None
 
 
-def inserir_pids(db, macaddress):
+# ============================================================
+# INSERIR / ATUALIZAR PROCESSOS
+# ============================================================
+def inserir_pids(db, idMaquina):
     try:
         with db.cursor() as cursor:
             for process in p.process_iter(["pid", "name", "username"]):
-                
-                cpu = process.cpu_percent(None)
-                memory = process.memory_info().rss / 1024 / 1024
-
-                io = process.io_counters()
-                io_read = io[0]    # <-- garante que é número
-                io_write = io[1]  # <-- garante que é número
+                try:
+                    cpu = process.cpu_percent(None)
+                    memory = process.memory_info().rss / 1024 / 1024
+                    io = process.io_counters()
+                    io_read = io[0]
+                    io_write = io[1]
+                except:
+                    continue  # processo morreu no meio
 
                 cursor.execute("""
-                    SELECT idMaquina 
-                    FROM processo 
-                    JOIN maquina ON fkMaquina = idMaquina 
-                    WHERE macAddress = %s 
-                      AND (pid = %s OR nome = %s)
-                """, (macaddress, process.info["pid"], process.info["name"]))
-
+                    SELECT idProcesso
+                    FROM processo
+                    WHERE fkMaquina = %s AND pid = %s
+                """, (idMaquina, process.info["pid"]))
                 exists = cursor.fetchone()
 
-                # === UPDATE ===
-                if exists is not None:
+                # UPDATE
+                if exists:
                     cursor.execute("""
-                    SELECT idMaquina
-                    FROM maquina where macAddress = %s
-                """, (macaddress,))
-                    
-                    idMaquina = cursor.fetchone()
+                        UPDATE processo
+                        SET usoCpu = %s, usoRam = %s, discoLido = %s, discoRecebido = %s
+                        WHERE idProcesso = %s
+                    """, (cpu, memory, io_read, io_write, exists[0]))
 
-                    cursor.execute(
-                        """
-                        UPDATE processo 
-                        SET usoCpu = %s,
-                            usoRam = %s,
-                            discoLido = %s,
-                            discoRecebido = %s
-                        WHERE nome = %s AND fkMaquina = %s
-                        """,
-                        (cpu, memory, io_read, io_write,
-                         process.info["name"], idMaquina[0])
-                    )
-
-                # === INSERT ===
+                # INSERT
                 else:
                     cursor.execute("""
-                    SELECT idMaquina 
-                    FROM maquina where macAddress = %s
-                """, (macaddress,))
-                    
-                    idMaquina = cursor.fetchone()
-                
-                    cursor.execute(
-                        """
-                        INSERT INTO processo 
+                        INSERT INTO processo
                         (fkMaquina, pid, nome, usuario, usoCpu, usoRam, discoLido, discoRecebido)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        """,
-                        (idMaquina[0],  # você precisa garantir que idMaquina vem de algum lugar
-                         process.info["pid"],
-                         process.info["name"],
-                         process.info["username"],
-                         cpu, memory,
-                         io_read, io_write)
-                    )
+                    """, (
+                        idMaquina,
+                        process.info["pid"],
+                        process.info["name"],
+                        process.info["username"],
+                        cpu, memory,
+                        io_read, io_write
+                    ))
 
                 db.commit()
 
-                print(f"PID: {process.info['pid']} - Nome: {process.info['name']} - Usuário: {process.info['username']} - CPU: {cpu} - Memória: {memory} - IO_read: {io_read} - IO_write: {io_write}")
-
     except Error as e:
-        print('Erro ao selecionar no MySQL -', e, "- inserir_pids")
+        print("Erro ao lidar com processos:", e)
 
 
-def identifica_fk(db, modelo, macAdress):
+# ============================================================
+# FKS DE COMPONENTES
+# ============================================================
+def identifica_fk(db, modelo, idMaquina):
     try:
         with db.cursor() as cursor:
-            # Busca id da máquina
-            cursor.execute("SELECT idMaquina FROM maquina WHERE macAddress = %s", (macAdress,))
-            idMaquina = cursor.fetchone()
+            cursor.execute("""
+                SELECT idComponente, fkMetrica 
+                FROM componente 
+                WHERE modelo LIKE %s
+            """, (f"%{modelo}%",))
 
-            cursor.execute("SELECT idComponente FROM componente WHERE modelo LIKE %s", (f"%{modelo}%",))
-            idComponente = cursor.fetchall()
+            retorno = cursor.fetchall()
 
-            cursor.execute("SELECT fkMetrica FROM componente WHERE modelo LIKE %s", (f"%{modelo}%",))
-            idMetrica = cursor.fetchall()
-
-        print(f"Maquina: {idMaquina} Componente: {idComponente} Metrica: {idMetrica}")
+        comps = [c[0] for c in retorno]
+        mets = [c[1] for c in retorno]
 
         return {
             "idMaquina": idMaquina,
-            "idComponente": idComponente,
-            "idMetrica": idMetrica
+            "idComponente": comps,
+            "idMetrica": mets
         }
 
     except Error as e:
-        print('Error ao selecionar no MySQL -', e, "- identifica-fk")
-        return {"idMaquina": None, "idComponente": None, "idMetrica": None}
+        print("Erro ao buscar FKs:", e)
+        return None
 
-def acessar_metricas(porc, idMetrica):
-    print(f"Valor a ser verificado: {porc}\nID da métrica: {idMetrica}")
-    try: 
-        with db.cursor() as cursor:
-            slctInterval = "select min, max from metricaComponente where idMetrica = %s"
-            cursor.execute(slctInterval, (idMetrica[0], ))
-            returnQuery = cursor.fetchone()
-            print(f"Min: {returnQuery[0]}\nMax: {returnQuery[1]}")
 
-            return {"porcentagem": porc, 
-            "id_metrica": idMetrica, 
-            "metricas": returnQuery}
-
-    except Error as e:  
-          print('Erro ao selecionar metricas MySQL -', e)
-
-def insert_alerta(porc, idMetrica, returnQuery):
-    print("Return query:", returnQuery)
+# ============================================================
+# BUSCA INTERVALO DE MÉTRICA
+# ============================================================
+def acessar_metricas(db, porc, idMetrica):
     try:
-        descricao = ""
-        estado = ""
-        exists_alerta = False
-        if mean(porc) > returnQuery[0] and mean(porc) < returnQuery[1]:
-            descricao = "Seu componente está ficando estressado. Verifique sua máquina!"
+        with db.cursor() as cursor:
+            cursor.execute("""
+                SELECT min, max 
+                FROM metricaComponente 
+                WHERE idMetrica = %s
+            """, (idMetrica,))
+            r = cursor.fetchone()
+            return {"porcentagem": porc, "intervalo": r}
 
+    except:
+        return None
+
+
+# ============================================================
+# INSERIR ALERTA AUTOMATICAMENTE
+# ============================================================
+def insert_alerta(db, porc, idMetrica, intervalo):
+    try:
+        descricao = "Uso saudável"
+        estado = None
+
+        if mean(porc) > intervalo[0] and mean(porc) < intervalo[1]:
+            descricao = "Seu componente está ficando estressado."
             estado = "Preocupante"
-            exists_alerta = True
-        elif mean(porc) > returnQuery[1]:
-            descricao = "Seu componente está utilizando muitos recursos. Verifique-o!"
 
+        elif mean(porc) >= intervalo[1]:
+            descricao = "Seu componente está crítico!"
             estado = "Crítico"
-            exists_alerta = True
-        else:
-            descricao = "O uso do seu componente é saudável"
-    
-        if exists_alerta is False:
-            return {"descricao": descricao, "id_alerta": None}
-        else:
-            with db.cursor() as cursor:
-                insert = "insert into alertaComponente (fkMetrica, estado) values(%s, %s)"
-                values = (idMetrica[0], estado)
-                cursor.execute(insert, values)
-                # db.commit()
-                id_alerta = cursor.lastrowid
-                print(cursor.rowcount, "registro inserido na tabela AlertaComponente")
-                return {"descricao": descricao, "id_alerta":  id_alerta}
 
-    except Error as e:  
-        print('Erro ao inserir alertas no MySQL -', e)
+        if estado is None:
+            return None  # sem alerta
 
-
-def inserir_porcentagem(porc, db, idMaquina, idComponente, idMetrica):
-    if not isinstance(porc, list):
-        porc = [porc]
-
-    if isinstance(idMaquina, tuple):
-        idMaquina = idMaquina[0]
-    
-    idComponente = [c[0] for c in idComponente]
-    idMetrica = [m[0] for m in idMetrica]
-
-    print("Fks normalizadas:", idMaquina, idComponente, idMetrica)
-    print("Valores a serem adicionados:", porc)
-
-    try:
         with db.cursor() as cursor:
-            qtd = min(len(idComponente), len(porc))
+            cursor.execute("""
+                INSERT INTO alertaComponente (fkMetrica, estado)
+                VALUES (%s, %s)
+            """, (idMetrica, estado))
+            db.commit()
+            return cursor.lastrowid
+
+    except:
+        return None
+
+
+# ============================================================
+# INSERIR VALORES DE CPU, RAM, DISCO
+# ============================================================
+def inserir_porcentagem(db, porc, fk):
+    try:
+        if not isinstance(porc, list):
+            porc = [porc]  # disco / ram
+
+        with db.cursor() as cursor:
+
+            qtd = min(len(fk["idComponente"]), len(porc))
 
             for i in range(qtd):
-                metricas = acessar_metricas(porc[i], [idMetrica[i]])
-                alerta = insert_alerta(
-                    metricas["porcentagem"],
-                    metricas["id_metrica"],
-                    metricas["metricas"]
-                )
+                idComp = fk["idComponente"][i]
+                idMet = fk["idMetrica"][i]
 
-                query = """
+                metricas = acessar_metricas(db, porc[i], idMet)
+                alerta_id = insert_alerta(db, porc, idMet, metricas["intervalo"])
+
+                cursor.execute("""
                     INSERT INTO logMonitoramento 
                     (fkComponente, fkMaquina, fkAlerta, fkMetrica, valor, descricao)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                """
-
-                values = (
-                    idComponente[i],
-                    idMaquina,
-                    alerta["id_alerta"],
-                    idMetrica[i],
+                """, (
+                    idComp,
+                    fk["idMaquina"],
+                    alerta_id,
+                    idMet,
                     porc[i],
-                    alerta["descricao"]
-                )
+                    "OK" if alerta_id is None else "ALERTA GERADO"
+                ))
 
-                cursor.execute(query, values)
                 db.commit()
 
-                print(cursor.rowcount, "registro inserido em logMonitoramento")
-
     except Error as e:
-        print('Erro ao inserir no MySQL -', e)
+        print("Erro ao inserir porcentagem:", e)
 
 
-
-def atualizar_uptime(db, macaddress, uptime):
+# ============================================================
+# UPTIME
+# ============================================================
+def atualizar_uptime(db, idMaquina, uptime):
     try:
         with db.cursor() as cursor:
-            query = "UPDATE maquina SET uptime = %s WHERE macAddress = %s"
-            values = (uptime, macaddress)
-            cursor.execute(query, values)
+            cursor.execute("""
+                UPDATE maquina SET uptime = %s WHERE idMaquina = %s
+            """, (uptime, idMaquina))
             db.commit()
-            print("Uptime atualizado na tabela maquina:", uptime)
+
     except Error as e:
         print("Erro ao atualizar uptime:", e)
 
 
-
-
-# fks
-
+# ============================================================
+# LOOP PRINCIPAL
+# ============================================================
 db = conectar_server()
-macAddress =identificar_macaddres(db)
-fkCpu = identifica_fk(db, "Ryzen 5 5600X", macAddress)
-fkRam = identifica_fk(db, "Vengeance LPX", macAddress)
-fkDisc = identifica_fk(db, "978 EVO Plus", macAddress)
-print(fkRam)
+
+macAddress, idMaquina = identificar_macaddres(db)
+
+fkCpu = identifica_fk(db, "Ryzen 5 5600X", idMaquina)
+fkRam = identifica_fk(db, "Vengeance LPX", idMaquina)
+fkDisc = identifica_fk(db, "978 EVO Plus", idMaquina)
 
 while True:
-    idMaquina = fkCpu["idMaquina"]
     ram_porc = p.virtual_memory().percent
     disk_porc = p.disk_usage("/").percent
-    disk_usage = p.disk_usage("C://").used
     cpu_porc = p.cpu_percent(interval=1, percpu=True)
 
-    boot_time = p.boot_time()
-    uptime_segundos = int(time() - boot_time)
-
+    uptime_segundos = int(time() - p.boot_time())
 
     if db:
-        # Chamada para salvar no banco
-        inserir_porcentagem(cpu_porc, db, fkCpu["idMaquina"], fkCpu["idComponente"], fkCpu["idMetrica"])
-        inserir_porcentagem(ram_porc, db, fkRam["idMaquina"], fkRam["idComponente"], fkRam["idMetrica"])
-        inserir_porcentagem(disk_porc, db, fkDisc["idMaquina"], fkDisc["idComponente"], fkDisc["idMetrica"])
-        inserir_pids(db, macaddress=macAddress)
+        inserir_porcentagem(db, cpu_porc, fkCpu)
+        inserir_porcentagem(db, ram_porc, fkRam)
+        inserir_porcentagem(db, disk_porc, fkDisc)
 
-        # atualizar_uptime(db, macAddress, uptime_segundos)
-    
+        inserir_pids(db, idMaquina)
+
+        atualizar_uptime(db, idMaquina, uptime_segundos)
+
     sleep(2)
