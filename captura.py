@@ -9,9 +9,6 @@ from getmac import get_mac_address as gma
 d.load_dotenv()
 
 
-# ============================================================
-# IDENTIFICA / REGISTRA MÁQUINA
-# ============================================================
 def identificar_macaddres(db):
     try:
         macAddress = gma()
@@ -45,9 +42,7 @@ def identificar_macaddres(db):
         return None, None
 
 
-# ============================================================
-# INSERIR / ATUALIZAR PROCESSOS
-# ============================================================
+
 def inserir_pids(db, idMaquina):
     try:
         with db.cursor() as cursor:
@@ -97,9 +92,7 @@ def inserir_pids(db, idMaquina):
         print("Erro ao lidar com processos:", e)
 
 
-# ============================================================
-# FKS DE COMPONENTES
-# ============================================================
+
 def identifica_fk(db, modelo, idMaquina):
     try:
         with db.cursor() as cursor:
@@ -125,9 +118,7 @@ def identifica_fk(db, modelo, idMaquina):
         return None
 
 
-# ============================================================
-# BUSCA INTERVALO DE MÉTRICA
-# ============================================================
+
 def acessar_metricas(db, porc, idMetrica):
     try:
         with db.cursor() as cursor:
@@ -143,9 +134,6 @@ def acessar_metricas(db, porc, idMetrica):
         return None
 
 
-# ============================================================
-# INSERIR ALERTA AUTOMATICAMENTE
-# ============================================================
 def insert_alerta(db, porc, idMetrica, intervalo):
     try:
         descricao = "Uso saudável"
@@ -168,7 +156,8 @@ def insert_alerta(db, porc, idMetrica, intervalo):
                 VALUES (%s, %s)
             """, (idMetrica, estado))
             db.commit()
-            return cursor.lastrowid
+            return {"alerta_id": cursor.lastrowid,
+                    "descricao": descricao}
 
     except:
         return None
@@ -191,7 +180,8 @@ def inserir_porcentagem(db, porc, fk):
                 idMet = fk["idMetrica"][i]
 
                 metricas = acessar_metricas(db, porc[i], idMet)
-                alerta_id = insert_alerta(db, porc, idMet, metricas["intervalo"])
+                alerta = insert_alerta(db, porc, idMet, metricas["intervalo"])
+                print(alerta)
 
                 cursor.execute("""
                     INSERT INTO logMonitoramento 
@@ -200,10 +190,10 @@ def inserir_porcentagem(db, porc, fk):
                 """, (
                     idComp,
                     fk["idMaquina"],
-                    alerta_id,
+                    alerta["alerta_id"] if alerta else None,
                     idMet,
                     porc[i],
-                    "OK" if alerta_id is None else "ALERTA GERADO"
+                    alerta["descricao"] if alerta else None
                 ))
 
                 db.commit()
