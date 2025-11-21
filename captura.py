@@ -1,7 +1,7 @@
 import psutil as p
 from mysql.connector import Error
 import dotenv as d
-from time import sleep
+from time import sleep, time
 from mysql_connect import conectar_server
 from numpy import mean
 from getmac import get_mac_address as gma
@@ -33,12 +33,12 @@ def inserir_pids(db, macaddress):
         with db.cursor() as cursor:
             for process in p.process_iter(["pid", "name", "username"]):
                 
-                cpu = process.cpu_percent(interval=1)
-                memory = process.memory_percent()
+                cpu = process.cpu_percent(None)
+                memory = process.memory_info().rss / 1024 / 1024
 
                 io = process.io_counters()
                 io_read = io[0]    # <-- garante que é número
-                io_write = io[1]   # <-- garante que é número
+                io_write = io[1]  # <-- garante que é número
 
                 cursor.execute("""
                     SELECT idMaquina 
@@ -246,10 +246,10 @@ def atualizar_uptime(db, macaddress, uptime):
 # fks
 
 db = conectar_server()
-macAddres =identificar_macaddres(db)
-fkCpu = identifica_fk(db, "Ryzen 5 5600X", macAddres)
-fkRam = identifica_fk(db, "Vengeance LPX", macAddres)
-fkDisc = identifica_fk(db, "978 EVO Plus", macAddres)
+macAddress =identificar_macaddres(db)
+fkCpu = identifica_fk(db, "Ryzen 5 5600X", macAddress)
+fkRam = identifica_fk(db, "Vengeance LPX", macAddress)
+fkDisc = identifica_fk(db, "978 EVO Plus", macAddress)
 print(fkRam)
 
 while True:
@@ -260,7 +260,7 @@ while True:
     cpu_porc = p.cpu_percent(interval=1, percpu=True)
 
     boot_time = p.boot_time()
-    uptime_segundos = int(time.time() - boot_time)
+    uptime_segundos = int(time() - boot_time)
 
 
     if db:
@@ -268,8 +268,8 @@ while True:
         inserir_porcentagem(cpu_porc, db, fkCpu["idMaquina"], fkCpu["idComponente"], fkCpu["idMetrica"])
         inserir_porcentagem(ram_porc, db, fkRam["idMaquina"], fkRam["idComponente"], fkRam["idMetrica"])
         inserir_porcentagem(disk_porc, db, fkDisc["idMaquina"], fkDisc["idComponente"], fkDisc["idMetrica"])
-        inserir_pids(db, macaddress=macAddres)
+        inserir_pids(db, macaddress=macAddress)
 
-        atualizar_uptime(db, macAddress, uptime_segundos)
+        # atualizar_uptime(db, macAddress, uptime_segundos)
     
     sleep(2)
