@@ -5,7 +5,9 @@ from time import sleep, time
 from mysql_connect import conectar_server
 from numpy import mean
 from getmac import get_mac_address as gma
-
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+from os import getenv
 d.load_dotenv()
 
 
@@ -155,6 +157,8 @@ def insert_alerta(db, porc, idMetrica, intervalo):
                 INSERT INTO alertaComponente (fkMetrica, estado)
                 VALUES (%s, %s)
             """, (idMetrica, estado))
+
+
             db.commit()
             return {"alerta_id": cursor.lastrowid,
                     "descricao": descricao}
@@ -163,9 +167,7 @@ def insert_alerta(db, porc, idMetrica, intervalo):
         return None
 
 
-# ============================================================
-# INSERIR VALORES DE CPU, RAM, DISCO
-# ============================================================
+
 def inserir_porcentagem(db, porc, fk):
     try:
         if not isinstance(porc, list):
@@ -198,13 +200,13 @@ def inserir_porcentagem(db, porc, fk):
 
                 db.commit()
 
+                if alerta is not None:
+                    enviar_slack(db, fk["idMaquina"], idMet, cursor.lastrowid)
+
     except Error as e:
         print("Erro ao inserir porcentagem:", e)
 
 
-# ============================================================
-# UPTIME
-# ============================================================
 def atualizar_uptime(db, idMaquina, uptime):
     try:
         with db.cursor() as cursor:
@@ -216,10 +218,94 @@ def atualizar_uptime(db, idMaquina, uptime):
     except Error as e:
         print("Erro ao atualizar uptime:", e)
 
+def enviar_slack(db, idMaquina, idMetrica, idLog):
+    try:
+        retorno = None
+        with db.cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                    m.macAddress,
+                    c.tipo AS componente,
+                    lm.dtHora,
+                    lm.valor,
+                    lm.descricao AS descricaoLog,
+                    ac.estado
+                FROM logMonitoramento lm
+                JOIN maquina m ON lm.fkMaquina = m.idMaquina
+                JOIN componente c ON lm.fkComponente = c.idComponente
+                JOIN alertaComponente ac ON lm.fkAlerta = ac.idAlerta
+                WHERE lm.fkMaquina   = %s
+                AND   lm.fkMetrica   = %s
+                AND   lm.idMonitoramento = %s
+            """, (idMaquina, idMetrica, idLog))
 
-# ============================================================
-# LOOP PRINCIPAL
-# ============================================================
+            retorno = cursor.fetchone()
+
+    except Error as e:
+        print("Erro ao buscar FKs:", e)
+        return None
+
+    if not retorno:
+        print("Nenhum dado encontrado para enviar ao Slack.")
+        return
+
+    mac, componente, dtHora, valor, desc, estado = retorno
+
+    # Define cor baseada no estado
+    cores = {
+        "Crítico": "#FF0000",
+        "Preocupante": "#FFA500",
+        "OK": "#36A64F"
+    }
+
+    cor_alerta = cores.get(estado, "#AAAAAA")
+
+    client = WebClient(getenv("SLACK_BOT"))
+
+    try:
+        resposta = client.chat_postMessage(
+            channel="#alertas-componente",
+            text=f"⚠️ *Alerta de {componente} detectado!*",
+            blocks=[
+                {
+                    "type": "header",
+                    "text": {"type": "plain_text", "text": f"🚨 Alerta ({estado})", "emoji": True}
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": (
+                            f"*📍 Máquina:* `{mac}`\n"
+                            f"*🧩 Componente:* {componente}\n"
+                            f"*📅 Data:* {dtHora}\n"
+                            f"*📊 Valor:* *{valor}%*\n"
+                            f"*📝 Descrição:* {desc}\n"
+                        )
+                    }
+                },
+                {
+                    "type": "divider"
+                },
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": f"🔴 *Nível:* `{estado}`"
+                        }
+                    ]
+                }
+            ]
+        )
+
+        print("Mensagem enviada:", resposta["ts"])
+
+    except SlackApiError as e:
+        print("Erro Slack: ", e.response["error"])
+
+
+
 db = conectar_server()
 
 macAddress, idMaquina = identificar_macaddres(db)
