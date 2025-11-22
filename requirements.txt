@@ -5,5 +5,4 @@ tabulate
 numpy
 pandas
 getmac
-requests
 slack_sdk
