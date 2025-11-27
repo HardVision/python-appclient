@@ -3,7 +3,7 @@ import time
 import requests
 from getmac import get_mac_address as gma
 
-app = "http://localhost:8080/"
+app = "http://localhost:3333/discoTempoReal"
 
 # Armazena o último estado para calcular MB/s
 ultima_verificacao_disco = psutil.disk_io_counters()
@@ -11,8 +11,8 @@ ultima_verificacao_disco = psutil.disk_io_counters()
 #Função para pegar o macAddress da máquina atual
 def get_mac():
     macAddress = gma()
-
-    return macAddress
+    # Retorna em lowercase para manter consistência com o banco
+    return macAddress.lower() if macAddress else None
 
 #Função para pegar a velocidade de leitura e escrita de megabytes por segundo que o disco ta fazendo agora
 def get_disco_velocidade_mb():
@@ -81,7 +81,7 @@ def enviar_para_node():
     dados = {
         "macAddress": get_mac(),
         "uso": get_disco_usage(),
-        "velocidade": list(get_disco_velocidade_mb()),
+        "velocidade": get_disco_velocidade_mb(),
         "processos": get_top_processes(4)
     }
 
