@@ -8,6 +8,7 @@ from getmac import get_mac_address as gma
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from os import getenv
+import platform
 d.load_dotenv()
 
 
@@ -206,6 +207,13 @@ def inserir_porcentagem(db, porc, fk):
     except Error as e:
         print("Erro ao inserir porcentagem:", e)
 
+def get_uptime_seconds():
+    so = platform.system().lower()
+
+    if so in ("windows", "linux", "darwin"):
+        return int(time() - p.boot_time())
+
+    return int(time() - p.boot_time())
 
 def atualizar_uptime(db, idMaquina, uptime):
     try:
@@ -319,7 +327,7 @@ while True:
     disk_porc = p.disk_usage("/").percent
     cpu_porc = p.cpu_percent(interval=1, percpu=True)
 
-    uptime_segundos = int(time() - p.boot_time())
+    uptime_segundos = get_uptime_seconds()
 
     if db:
         inserir_porcentagem(db, cpu_porc, fkCpu)
